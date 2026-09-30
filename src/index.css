@@ -1,0 +1,359 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-today: var(--color-today);
+  --color-issue: var(--color-issue);
+  --color-issue-bg: var(--color-issue-bg);
+}
+
+/* Light palette (default) */
+:root,
+:root[data-theme='light'] {
+  --color-bg: #f7f7fb;
+  --color-surface: #ffffff;
+  --color-border: #e6e5ec;
+  --color-text: #2b2933;
+  --color-text-muted: #706c7a;
+  --color-primary: #6d5ef1;
+  --color-primary-dark: #5540e8;
+  --color-today: #ef4444;
+  --color-issue: #ef4444;
+  --color-issue-bg: #fee2e2;
+  color-scheme: light;
+}
+
+/* Dark palette — system preference, unless the user explicitly chose light.
+   The :not() guard matters: without it this rule still applies after the
+   toggle, so light mode never took effect on a dark-themed OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #14141a;
+    --color-surface: #1d1d26;
+    --color-border: #2d2d38;
+    --color-text: #eeeef2;
+    --color-text-muted: #9b98a6;
+    --color-primary: #8b7bf7;
+    --color-primary-dark: #7563f0;
+    --color-today: #f87171;
+    --color-issue: #f87171;
+    --color-issue-bg: #3a1f24;
+    color-scheme: dark;
+  }
+}
+
+/* Explicit toggle wins over the system preference (higher specificity). */
+:root[data-theme='dark'] {
+  --color-bg: #14141a;
+  --color-surface: #1d1d26;
+  --color-border: #2d2d38;
+  --color-text: #eeeef2;
+  --color-text-muted: #9b98a6;
+  --color-primary: #8b7bf7;
+  --color-primary-dark: #7563f0;
+  --color-today: #f87171;
+  --color-issue: #f87171;
+  --color-issue-bg: #3a1f24;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Smooth theme transition (utilities with their own transition-* win via specificity). */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.2s ease;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', system-ui, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+}
+
+/* ============================================================
+   Aurora / glass design layer
+   ============================================================ */
+
+:root {
+  --grad-a: #6d5ef1;
+  --grad-b: #a855f7;
+  --grad-c: #22d3ee;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 18px 45px -20px rgba(45, 35, 110, 0.45);
+  --aurora-opacity: 0.5;
+
+  /* Illustration palette (kept separate so characters read well in both themes) */
+  --ill-surface: #ffffff;
+  --ill-surface-2: #eeecfb;
+  --ill-line: #d9d5f0;
+  --ill-skin: #f0c3a0;
+  --ill-skin-dark: #d9a781;
+  --ill-hair: #3a3350;
+}
+
+:root[data-theme='dark'] {
+  --grad-a: #7c6cf5;
+  --grad-b: #c084fc;
+  --grad-c: #38bdf8;
+  --glass-bg: rgba(29, 29, 38, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 18px 45px -20px rgba(0, 0, 0, 0.7);
+  --aurora-opacity: 0.38;
+
+  --ill-surface: #262633;
+  --ill-surface-2: #30303f;
+  --ill-line: #3e3e51;
+  --ill-skin: #e0ac86;
+  --ill-skin-dark: #c48f6b;
+  --ill-hair: #171622;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --grad-a: #7c6cf5;
+    --grad-b: #c084fc;
+    --grad-c: #38bdf8;
+    --glass-bg: rgba(29, 29, 38, 0.68);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 18px 45px -20px rgba(0, 0, 0, 0.7);
+    --aurora-opacity: 0.38;
+
+    --ill-surface: #262633;
+    --ill-surface-2: #30303f;
+    --ill-line: #3e3e51;
+    --ill-skin: #e0ac86;
+    --ill-skin-dark: #c48f6b;
+    --ill-hair: #171622;
+  }
+}
+
+/* Frosted surface used by cards, headers and modals. */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Text filled with the brand gradient. */
+.text-gradient {
+  background-image: linear-gradient(115deg, var(--grad-a), var(--grad-b) 55%, var(--grad-c));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(115deg, var(--grad-a), var(--grad-b) 55%, var(--grad-c));
+}
+
+/* ---------- keyframes ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Slow wandering blobs behind the page. */
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(6%, -8%) scale(1.12);
+  }
+  66% {
+    transform: translate(-5%, 6%) scale(0.94);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  40% {
+    transform: translate(-8%, 5%) scale(1.15);
+  }
+  75% {
+    transform: translate(5%, 8%) scale(0.9);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- animation utilities ---------- */
+
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-fade-in {
+  animation: fade-in 0.6s ease both;
+}
+.animate-scale-in {
+  animation: scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-float {
+  animation: float-y 7s ease-in-out infinite;
+}
+.animate-float-slow {
+  animation: float-y 11s ease-in-out infinite;
+}
+.animate-pulse-soft {
+  animation: pulse-soft 3.5s ease-in-out infinite;
+}
+.animate-grow-x {
+  transform-origin: left center;
+  animation: grow-x 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger children entrances: .stagger > * with increasing delay. */
+.stagger > * {
+  animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.stagger > *:nth-child(5) { animation-delay: 0.33s; }
+.stagger > *:nth-child(6) { animation-delay: 0.4s; }
+.stagger > *:nth-child(7) { animation-delay: 0.47s; }
+.stagger > *:nth-child(8) { animation-delay: 0.54s; }
+.stagger > *:nth-child(n + 9) { animation-delay: 0.6s; }
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.45s; }
+
+/* Buttons and cards get a subtle lift. */
+.lift {
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
+.lift:active {
+  transform: translateY(0);
+}
+
+/* Respect users who ask for less motion: keep the design, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .lift:hover {
+    transform: none;
+  }
+}
