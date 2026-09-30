@@ -1,0 +1,38 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npx oxlint
+
+      - name: Rust tests (core)
+        run: cargo test -p timeline-core --manifest-path core/Cargo.toml
+
+      - name: Build MSI + NSIS
+        run: npx tauri build --bundles msi,nsis
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: po-timeline-windows
+          path: src-tauri/target/release/bundle/**/*.msi
