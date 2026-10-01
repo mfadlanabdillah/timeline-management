@@ -1,0 +1,625 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icon } from "theme.slint";
+import { GanttRow } from "types.slint";
+import { AppData, Api } from "state.slint";
+import { FIcon, Label, FButton, IconButton, Card, Pill, ProgressBar, Segmented } from "controls.slint";
+
+global G {
+    out property <length> row-h: 44px;
+    out property <length> head-h: 56px;
+    out property <length> list-w: 400px;
+    out property <length> bar-h: 22px;
+}
+
+// Left pane: one row per item. Reorder arrows float over the right edge on hover.
+component ListRow inherits Rectangle {
+    in property <GanttRow> item;
+    in property <bool> first;
+    in property <bool> last;
+    callback open();
+
+    property <bool> hot: ta.has-hover || up.hovered || down.hovered;
+    height: G.row-h;
+    background: hot ? Theme.subtle-hover : transparent;
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.open(); }
+    }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 12px;
+        spacing: 10px;
+        Rectangle {
+            width: 12px;
+            if item.milestone: FIcon {
+                glyph: Icon.flag;
+                font-size: 12px;
+                color: item.tint;
+            }
+            if !item.milestone: Rectangle {
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                background: item.tint;
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 1px;
+            Label {
+                text: item.name;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            Label {
+                text: item.range-label;
+                font-size: 11px;
+                color: Theme.text-3;
+            }
+        }
+        if item.issues > 0: VerticalLayout {
+            alignment: center;
+            Pill { text: item.issues + (item.issues == 1 ? " issue" : " issues"); kind: 4; }
+        }
+        VerticalLayout {
+            alignment: center;
+            Pill {
+                text: item.status;
+                kind: item.status-kind;
+            }
+        }
+        Label {
+            width: 34px;
+            text: item.progress + "%";
+            font-size: 12px;
+            color: Theme.text-2;
+            horizontal-alignment: right;
+        }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 6px;
+        y: (parent.height - self.height) / 2;
+        width: 60px;
+        height: 30px;
+        visible: hot && !(first && last);
+        border-radius: Theme.radius-sm;
+        background: Theme.card;
+        border-width: 1px;
+        border-color: Theme.stroke-strong;
+        HorizontalLayout {
+            padding: 2px;
+            spacing: 2px;
+            up := IconButton {
+                glyph: Icon.up;
+                size: 26px;
+                tint: first ? Theme.text-3 : Theme.text;
+                tooltip: "Move up";
+                clicked => { if !first { Api.move-item(item.id, -1); } }
+            }
+            down := IconButton {
+                glyph: Icon.down;
+                size: 26px;
+                tint: last ? Theme.text-3 : Theme.text;
+                tooltip: "Move down";
+                clicked => { if !last { Api.move-item(item.id, 1); } }
+            }
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.divider;
+    }
+}
+
+// Right pane: the bar for one item, with drag-to-move and edge resize.
+component BarRow inherits Rectangle {
+    in property <GanttRow> item;
+    in property <length> dw;
+    callback open();
+
+    // 0 idle, 1 move, 2 resize end, 3 resize start
+    property <int> mode;
+    property <int> drag;
+    property <length> bar-x: item.left + ((mode == 1 || mode == 3) ? drag * dw : 0);
+    property <length> bar-w: max(dw, item.span + (mode == 2 ? drag * dw : mode == 3 ? -drag * dw : 0));
+    property <int> hover-zone: mode != 0 ? mode : zone(ta.mouse-x);
+
+    pure function zone(mx: length) -> int {
+        if item.milestone {
+            return (mx >= item.left - 6px && mx <= item.left + dw + 6px) ? 1 : 0;
+        }
+        if mx < item.left - 3px || mx > item.left + item.span + 3px { return 0; }
+        if item.span > 18px && mx > item.left + item.span - 7px { return 2; }
+        if item.span > 18px && mx < item.left + 7px { return 3; }
+        return 1;
+    }
+
+    height: G.row-h;
+
+    if !item.milestone: Rectangle {
+        x: bar-x;
+        y: (G.row-h - G.bar-h) / 2;
+        width: bar-w;
+        height: G.bar-h;
+        border-radius: 5px;
+        background: item.tint.with-alpha(Theme.dark ? 0.32 : 0.22);
+        border-width: 1px;
+        border-color: item.tint.with-alpha(hover-zone != 0 ? 1.0 : 0.55);
+        clip: true;
+        drop-shadow-blur: mode != 0 ? 10px : 0;
+        drop-shadow-color: #00000033;
+        Rectangle {
+            x: 0;
+            width: parent.width * item.progress / 100;
+            background: item.tint;
+        }
+        if bar-w > 44px: Label {
+            x: parent.width - self.width - 8px;
+            width: self.preferred-width;
+            text: item.progress + "%";
+            font-size: 11px;
+            font-weight: 600;
+            color: item.progress >= 90 ? #FFFFFF : Theme.text;
+        }
+    }
+    if item.milestone: Path {
+        x: bar-x + dw / 2 - 9px;
+        y: (G.row-h - 18px) / 2;
+        width: 18px;
+        height: 18px;
+        viewbox-width: 18;
+        viewbox-height: 18;
+        commands: "M 9 0 L 18 9 L 9 18 L 0 9 Z";
+        fill: item.tint;
+        stroke: hover-zone != 0 ? Theme.text : transparent;
+        stroke-width: 1px;
+    }
+
+    // Name to the right of the bar.
+    Label {
+        x: bar-x + (item.milestone ? dw / 2 + 14px : bar-w + 8px);
+        width: 260px;
+        text: item.name;
+        font-size: 12px;
+        color: Theme.text-2;
+    }
+
+    // Live delta badge while dragging.
+    if mode != 0 && drag != 0: Rectangle {
+        x: bar-x;
+        y: 0;
+        height: 16px;
+        width: badge.preferred-width + 10px;
+        border-radius: 3px;
+        background: Theme.text;
+        badge := Label {
+            text: (drag > 0 ? "+" : "") + drag + "d";
+            font-size: 10px;
+            font-weight: 600;
+            color: Theme.card;
+            horizontal-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: hover-zone == 1 ? MouseCursor.move : hover-zone >= 2 ? MouseCursor.ew-resize : MouseCursor.default;
+        pointer-event(ev) => {
+            if ev.button != PointerEventButton.left { return; }
+            if ev.kind == PointerEventKind.down {
+                mode = zone(self.mouse-x);
+                drag = 0;
+            } else if ev.kind == PointerEventKind.up {
+                if mode != 0 {
+                    if drag != 0 {
+                        Api.drag-item(item.id, mode, drag);
+                    } else {
+                        root.open();
+                    }
+                }
+                mode = 0;
+                drag = 0;
+            }
+        }
+        moved => {
+            if mode != 0 {
+                drag = round((self.mouse-x - self.pressed-x) / dw);
+            }
+        }
+    }
+}
+
+export component Gantt inherits Card {
+    callback open-item(GanttRow);
+    clip: true;
+
+    property <int> scroll-req: AppData.scroll-to-today;
+    changed scroll-req => { scroll-to-today(); }
+
+    public function scroll-to-today() {
+        if AppData.today-x < 0 { return; }
+        grid.content-x = clamp(
+            -(AppData.today-x - grid.visible-width * 0.3),
+            min(0px, grid.visible-width - AppData.gantt-width),
+            0px);
+    }
+
+    // Wait one frame for the ScrollView to get its size.
+    Timer {
+        interval: 16ms;
+        running: true;
+        triggered => {
+            self.running = false;
+            root.scroll-to-today();
+        }
+    }
+
+    // ---- left header
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: G.list-w;
+        height: G.head-h;
+        HorizontalLayout {
+            padding-left: 16px;
+            padding-right: 10px;
+            Label {
+                text: AppData.rows.length + (AppData.rows.length == 1 ? " item" : " items");
+                font-size: Theme.caption;
+                font-weight: 600;
+                color: Theme.text-2;
+                horizontal-stretch: 1;
+            }
+            Label {
+                text: "Status · Progress";
+                font-size: Theme.caption;
+                color: Theme.text-3;
+            }
+        }
+    }
+
+    // ---- left list (scrolls with the grid)
+    Rectangle {
+        x: 0;
+        y: G.head-h;
+        width: G.list-w;
+        height: root.height - G.head-h;
+        clip: true;
+        TouchArea {
+            scroll-event(e) => {
+                grid.content-y = clamp(
+                    grid.content-y + e.delta-y,
+                    min(0px, grid.visible-height - grid.content-height),
+                    0px);
+                accept
+            }
+        }
+        for r[i] in AppData.rows: ListRow {
+            x: 0;
+            y: i * G.row-h + grid.content-y;
+            width: G.list-w;
+            item: r;
+            first: i == 0;
+            last: i == AppData.rows.length - 1;
+            open => { root.open-item(r); }
+        }
+        if AppData.rows.length == 0: VerticalLayout {
+            padding: 24px;
+            alignment: start;
+            spacing: 6px;
+            Label {
+                text: "No timeline items yet";
+                font-weight: 600;
+            }
+            Label {
+                text: "Use “New item” to add phases and milestones.";
+                font-size: Theme.caption;
+                color: Theme.text-2;
+                wrap: word-wrap;
+            }
+        }
+    }
+
+    // pane divider + header divider
+    Rectangle {
+        x: G.list-w;
+        width: 1px;
+        background: Theme.stroke;
+    }
+    Rectangle {
+        y: G.head-h - 1px;
+        height: 1px;
+        background: Theme.stroke;
+    }
+
+    // ---- timeline header (months + days), follows horizontal scroll
+    Rectangle {
+        x: G.list-w + 1px;
+        y: 0;
+        width: root.width - G.list-w - 1px;
+        height: G.head-h - 1px;
+        clip: true;
+        Rectangle {
+            x: grid.content-x;
+            width: AppData.gantt-width;
+            for m in AppData.months: Rectangle {
+                x: m.left;
+                y: 0;
+                width: m.span;
+                height: 28px;
+                Rectangle {
+                    x: 0;
+                    width: 1px;
+                    background: Theme.divider;
+                }
+                Label {
+                    x: 8px;
+                    width: max(0px, parent.width - 12px);
+                    text: m.label;
+                    font-size: Theme.caption;
+                    font-weight: 600;
+                }
+            }
+            for d in AppData.days: Label {
+                x: d.left;
+                y: 28px;
+                width: AppData.day-width;
+                height: 26px;
+                text: d.label;
+                font-size: 11px;
+                horizontal-alignment: center;
+                overflow: clip;
+                color: d.weekend ? Theme.text-3 : Theme.text-2;
+            }
+            if AppData.today-x >= 0: Rectangle {
+                x: AppData.today-x - 3px + AppData.day-width / 2;
+                y: G.head-h - 7px;
+                width: 6px;
+                height: 6px;
+                border-radius: 3px;
+                background: Theme.today;
+            }
+        }
+    }
+
+    // ---- grid
+    grid := ScrollView {
+        x: G.list-w + 1px;
+        y: G.head-h;
+        width: root.width - G.list-w - 1px;
+        height: root.height - G.head-h;
+        content-width: AppData.gantt-width;
+        content-height: max(AppData.rows.length * G.row-h, self.visible-height);
+
+        Rectangle {
+            width: AppData.gantt-width;
+            height: grid.content-height;
+
+            for d in AppData.days: Rectangle {
+                x: d.left;
+                width: AppData.day-width;
+                visible: d.weekend;
+                background: Theme.grid-weekend;
+            }
+            for m in AppData.months: Rectangle {
+                x: m.left;
+                width: 1px;
+                background: Theme.divider;
+            }
+            for r[i] in AppData.rows: Rectangle {
+                y: (i + 1) * G.row-h - 1px;
+                height: 1px;
+                background: Theme.divider;
+            }
+            if AppData.today-x >= 0: Rectangle {
+                x: AppData.today-x + AppData.day-width / 2 - 1px;
+                width: 2px;
+                background: Theme.today.with-alpha(0.8);
+            }
+            for r[i] in AppData.rows: BarRow {
+                x: 0;
+                y: i * G.row-h;
+                width: AppData.gantt-width;
+                item: r;
+                dw: AppData.day-width;
+                open => { root.open-item(r); }
+            }
+        }
+    }
+}
+
+component Stat inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <int> kind;
+    VerticalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        alignment: center;
+        spacing: 2px;
+        Label {
+            text: label;
+            font-size: Theme.caption;
+            color: Theme.text-2;
+        }
+        Label {
+            text: value;
+            font-family: Theme.font-display;
+            font-size: 20px;
+            font-weight: 600;
+            color: kind == 0 ? Theme.text : Theme.status-fg(kind);
+        }
+    }
+}
+
+export component ProjectPage inherits Rectangle {
+    callback new-item();
+    callback open-item(GanttRow);
+    callback edit-project();
+    callback delete-project();
+
+    VerticalLayout {
+        padding: 40px;
+        padding-top: 20px;
+        padding-bottom: 24px;
+        spacing: 16px;
+
+        // Breadcrumb
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            Rectangle {
+                width: crumb.preferred-width;
+                crumb := Label {
+                    text: "Portfolio";
+                    color: cta.has-hover ? Theme.text : Theme.text-2;
+                }
+                cta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { Api.open-home(); }
+                }
+            }
+            FIcon {
+                glyph: Icon.chevron-right;
+                font-size: 10px;
+                color: Theme.text-3;
+            }
+            Label {
+                text: AppData.project-name;
+                color: Theme.text-2;
+            }
+        }
+
+        // Title + command bar
+        HorizontalLayout {
+            spacing: 12px;
+            Label {
+                text: AppData.project-name;
+                font-family: Theme.font-display;
+                font-size: Theme.title;
+                font-weight: 600;
+            }
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    height: 24px;
+                    border-radius: Theme.radius-sm;
+                    background: Theme.subtle-hover;
+                    min-width: code.preferred-width + 16px;
+                    code := Label {
+                        text: AppData.project-code;
+                        font-family: "Cascadia Mono";
+                        font-size: 12px;
+                        color: Theme.text-2;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 8px;
+                    FButton {
+                        accent: true;
+                        glyph: Icon.add;
+                        text: "New item";
+                        clicked => { root.new-item(); }
+                    }
+                    FButton {
+                        glyph: Icon.table;
+                        text: "Excel";
+                        clicked => { Api.export("xlsx"); }
+                    }
+                    FButton {
+                        glyph: Icon.document;
+                        text: "PDF";
+                        clicked => { Api.export("pdf"); }
+                    }
+                    FButton {
+                        glyph: Icon.edit;
+                        clicked => { root.edit-project(); }
+                    }
+                    FButton {
+                        glyph: Icon.delete;
+                        danger: true;
+                        clicked => { root.delete-project(); }
+                    }
+                }
+            }
+        }
+
+        // Summary strip
+        Card {
+            height: 68px;
+            HorizontalLayout {
+                VerticalLayout {
+                    width: 220px;
+                    padding-left: 20px;
+                    padding-right: 20px;
+                    alignment: center;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        Label {
+                            text: "Overall progress";
+                            font-size: Theme.caption;
+                            color: Theme.text-2;
+                            horizontal-stretch: 1;
+                        }
+                        Label {
+                            text: AppData.project-kpis.progress + "%";
+                            font-weight: 600;
+                            color: Theme.accent;
+                        }
+                    }
+                    ProgressBar { value: AppData.project-kpis.progress; }
+                }
+                Rectangle { width: 1px; background: Theme.divider; }
+                Stat { label: "Items"; value: AppData.project-kpis.total; }
+                Stat { label: "Completed"; value: AppData.project-kpis.completed; kind: 1; }
+                Stat { label: "At risk"; value: AppData.project-kpis.at-risk; kind: 3; }
+                Stat { label: "Overdue"; value: AppData.project-kpis.overdue; kind: 4; }
+                Stat { label: "Open issues"; value: AppData.project-kpis.issues; kind: 4; }
+                Rectangle { horizontal-stretch: 1; }
+            }
+        }
+
+        // Timeline toolbar
+        HorizontalLayout {
+            spacing: 8px;
+            Label {
+                text: "Timeline";
+                font-size: Theme.body-large;
+                font-weight: 600;
+                horizontal-stretch: 1;
+            }
+            Label {
+                text: "Drag bars to reschedule · drag edges to resize";
+                font-size: Theme.caption;
+                color: Theme.text-3;
+            }
+            Rectangle { width: 8px; }
+            FButton {
+                glyph: Icon.today;
+                text: "Today";
+                clicked => { gantt.scroll-to-today(); }
+            }
+            Segmented {
+                options: ["Days", "Weeks"];
+                index: AppData.zoom;
+                selected(i) => { Api.set-zoom(i); }
+            }
+        }
+
+        gantt := Gantt {
+            vertical-stretch: 1;
+            min-height: 200px;
+            open-item(r) => { root.open-item(r); }
+        }
+    }
+}

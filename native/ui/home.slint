@@ -1,0 +1,247 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icon } from "theme.slint";
+import { ProjectCard } from "types.slint";
+import { AppData, Api } from "state.slint";
+import { FIcon, Label, FButton, IconButton, Card, KpiTile, ProgressBar, Pill } from "controls.slint";
+
+component ProjectTile inherits Rectangle {
+    in property <ProjectCard> p;
+    callback edit();
+    callback remove();
+
+    border-radius: Theme.radius;
+    border-width: 1px;
+    border-color: ta.has-hover ? Theme.stroke-strong : Theme.stroke;
+    background: ta.has-hover ? Theme.card-hover : Theme.card;
+    drop-shadow-blur: ta.has-hover ? 16px : 2px;
+    drop-shadow-offset-y: ta.has-hover ? 4px : 1px;
+    drop-shadow-color: #0000001A;
+    animate drop-shadow-blur, drop-shadow-offset-y, background { duration: 150ms; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Api.open-project(p.id); }
+    }
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                spacing: 6px;
+                horizontal-stretch: 1;
+                Label {
+                    text: p.name;
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Rectangle {
+                        height: 20px;
+                        border-radius: Theme.radius-sm;
+                        background: Theme.subtle-hover;
+                        min-width: code.preferred-width + 12px;
+                        code := Label {
+                            text: p.code;
+                            font-family: "Cascadia Mono";
+                            font-size: 11px;
+                            color: Theme.text-2;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+            Label {
+                text: p.k.progress + "%";
+                font-family: Theme.font-display;
+                font-size: 24px;
+                font-weight: 600;
+                color: Theme.accent;
+                vertical-alignment: top;
+            }
+        }
+        ProgressBar { value: p.k.progress; }
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+            if p.k.total == 0: Label {
+                text: "No items yet";
+                font-size: Theme.caption;
+                color: Theme.text-3;
+            }
+            if p.k.total > 0: Label {
+                text: p.k.completed + " of " + p.k.total + " done";
+                font-size: Theme.caption;
+                color: Theme.text-2;
+            }
+            if p.k.at-risk > 0: Pill { text: p.k.at-risk + " at risk"; kind: 3; }
+            if p.k.overdue > 0: Pill { text: p.k.overdue + " overdue"; kind: 4; }
+            if p.k.issues > 0: Pill { text: p.k.issues + (p.k.issues == 1 ? " issue" : " issues"); kind: 4; }
+        }
+        Rectangle { vertical-stretch: 1; }
+        HorizontalLayout {
+            spacing: 4px;
+            Label {
+                text: "Open timeline";
+                font-size: Theme.caption;
+                font-weight: 600;
+                color: Theme.accent;
+            }
+            FIcon {
+                glyph: Icon.chevron-right;
+                font-size: 10px;
+                color: Theme.accent;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            IconButton {
+                glyph: Icon.edit;
+                size: 28px;
+                tooltip: "Edit project";
+                clicked => { root.edit(); }
+            }
+            IconButton {
+                glyph: Icon.delete;
+                size: 28px;
+                tooltip: "Delete project";
+                clicked => { root.remove(); }
+            }
+        }
+    }
+}
+
+export component HomePage inherits Rectangle {
+    callback new-project();
+    callback edit-project(ProjectCard);
+    callback delete-project(ProjectCard);
+
+    property <length> gap: 16px;
+    property <length> tile-h: 170px;
+    property <length> inner-w: sv.visible-width - 2 * 40px;
+    property <int> cols: max(1, floor((inner-w + gap) / (300px + gap)));
+    property <length> tile-w: (inner-w - (cols - 1) * gap) / cols;
+
+    sv := ScrollView {
+        content-width: sv.visible-width;
+        content-height: col.preferred-height;
+
+        col := VerticalLayout {
+            width: sv.visible-width;
+            padding: 40px;
+            padding-top: 32px;
+            spacing: 24px;
+
+            HorizontalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    Label {
+                        text: "Portfolio";
+                        font-family: Theme.font-display;
+                        font-size: Theme.title;
+                        font-weight: 600;
+                    }
+                    Label {
+                        text: AppData.projects.length == 0
+                            ? "Create your first project to get started."
+                            : AppData.projects.length + (AppData.projects.length == 1 ? " project" : " projects")
+                              + " · " + AppData.portfolio.total + " timeline items";
+                        color: Theme.text-2;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    FButton {
+                        accent: true;
+                        glyph: Icon.add;
+                        text: "New project";
+                        clicked => { root.new-project(); }
+                    }
+                }
+            }
+
+            if AppData.projects.length > 0: HorizontalLayout {
+                spacing: gap;
+                KpiTile {
+                    label: "Overall progress";
+                    value: AppData.portfolio.progress + "%";
+                    glyph: Icon.timeline;
+                    bar: AppData.portfolio.progress;
+                }
+                KpiTile {
+                    label: "Completed";
+                    value: AppData.portfolio.completed;
+                    glyph: Icon.check;
+                    kind: 1;
+                }
+                KpiTile {
+                    label: "At risk";
+                    value: AppData.portfolio.at-risk;
+                    glyph: Icon.warning;
+                    kind: 3;
+                }
+                KpiTile {
+                    label: "Open issues";
+                    value: AppData.portfolio.issues;
+                    glyph: Icon.error;
+                    kind: 4;
+                }
+            }
+
+            if AppData.projects.length > 0: Label {
+                text: "Projects";
+                font-size: Theme.body-large;
+                font-weight: 600;
+            }
+
+            if AppData.projects.length == 0: Card {
+                height: 280px;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 12px;
+                    FIcon {
+                        glyph: Icon.project;
+                        font-size: 48px;
+                        color: Theme.accent;
+                    }
+                    Label {
+                        text: "No projects yet";
+                        font-size: Theme.subtitle;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Label {
+                        text: "A project holds timeline items, notes and progress.\nShare its code with stakeholders so they can follow along.";
+                        color: Theme.text-2;
+                        horizontal-alignment: center;
+                        overflow: clip;
+                    }
+                    HorizontalLayout {
+                        alignment: center;
+                        FButton {
+                            accent: true;
+                            glyph: Icon.add;
+                            text: "Create your first project";
+                            clicked => { root.new-project(); }
+                        }
+                    }
+                }
+            }
+
+            if AppData.projects.length > 0: Rectangle {
+                height: ceil(AppData.projects.length / cols) * (tile-h + gap) - gap;
+                for p[i] in AppData.projects: ProjectTile {
+                    x: mod(i, cols) * (tile-w + gap);
+                    y: floor(i / cols) * (tile-h + gap);
+                    width: tile-w;
+                    height: tile-h;
+                    p: p;
+                    edit => { root.edit-project(p); }
+                    remove => { root.delete-project(p); }
+                }
+            }
+        }
+    }
+}

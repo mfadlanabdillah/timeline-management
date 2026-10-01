@@ -1,0 +1,102 @@
+// Fluent / Windows 11 design tokens. Colors follow the WinUI 3 light/dark
+// resource sets (Mica base, layer, card, stroke, text tiers, signal colors).
+import { Palette } from "std-widgets.slint";
+
+export global Theme {
+    // 0 = follow system, 1 = light, 2 = dark
+    in-out property <int> mode: 0;
+    // Read back what the Fluent widgets resolved (system scheme when mode is 0).
+    out property <bool> dark: Palette.foreground == #FFFFFF;
+
+    // Surfaces
+    out property <color> mica: dark ? #202020 : #F3F3F3;
+    out property <color> layer: dark ? #272727 : #F9F9F9;
+    out property <color> card: dark ? #2D2D2D : #FFFFFF;
+    out property <color> card-hover: dark ? #323232 : #FAFAFA;
+    out property <color> subtle-hover: dark ? #FFFFFF0F : #0000000A;
+    out property <color> subtle-pressed: dark ? #FFFFFF0A : #00000006;
+    out property <color> smoke: #0000004D;
+    out property <color> stroke: dark ? #FFFFFF14 : #0000000F;
+    out property <color> stroke-strong: dark ? #FFFFFF24 : #00000024;
+    out property <color> divider: dark ? #FFFFFF0F : #0000000F;
+    out property <color> grid-weekend: dark ? #FFFFFF08 : #00000005;
+
+    // Text
+    out property <color> text: dark ? #FFFFFF : #1B1B1B;
+    out property <color> text-2: dark ? #FFFFFFC5 : #000000A0;
+    out property <color> text-3: dark ? #FFFFFF87 : #00000072;
+    out property <color> on-accent: dark ? #000000 : #FFFFFF;
+
+    // Accent + signal
+    out property <color> accent: dark ? #60CDFF : #005FB8;
+    out property <color> accent-hover: dark ? #5AB9E8 : #1A6FC0;
+    out property <color> accent-subtle: dark ? #60CDFF26 : #005FB81A;
+    out property <color> success: dark ? #6CCB5F : #0F7B0F;
+    out property <color> success-bg: dark ? #393D1B : #DFF6DD;
+    out property <color> caution: dark ? #FCE100 : #9D5D00;
+    out property <color> caution-bg: dark ? #433519 : #FFF4CE;
+    out property <color> critical: dark ? #FF99A4 : #C42B1C;
+    out property <color> critical-bg: dark ? #442726 : #FDE7E9;
+    out property <color> info: dark ? #99EBFF : #005FB8;
+    out property <color> info-bg: dark ? #1E3A4C : #E5F1FB;
+    out property <color> today: #E81123;
+
+    // Type ramp (Segoe UI Variable)
+    out property <string> font: "Segoe UI Variable Text";
+    out property <string> font-display: "Segoe UI Variable Display";
+    out property <string> icons: "Segoe Fluent Icons";
+    out property <length> caption: 12px;
+    out property <length> body: 14px;
+    out property <length> body-large: 18px;
+    out property <length> subtitle: 20px;
+    out property <length> title: 28px;
+    out property <length> radius: 8px;
+    out property <length> radius-sm: 4px;
+
+    // Status kinds: 0 neutral, 1 success, 2 info, 3 caution, 4 critical
+    public pure function status-fg(kind: int) -> color {
+        if kind == 1 { return success; }
+        if kind == 2 { return info; }
+        if kind == 3 { return caution; }
+        if kind == 4 { return critical; }
+        return text-2;
+    }
+    public pure function status-bg(kind: int) -> color {
+        if kind == 1 { return success-bg; }
+        if kind == 2 { return info-bg; }
+        if kind == 3 { return caution-bg; }
+        if kind == 4 { return critical-bg; }
+        return subtle-hover;
+    }
+}
+
+// Segoe Fluent Icons code points.
+export global Icon {
+    out property <string> add: "\u{E710}";
+    out property <string> delete: "\u{E74D}";
+    out property <string> edit: "\u{E70F}";
+    out property <string> calendar: "\u{E787}";
+    out property <string> home: "\u{E80F}";
+    out property <string> project: "\u{E8F1}";
+    out property <string> download: "\u{E896}";
+    out property <string> sign-out: "\u{F3B1}";
+    out property <string> person: "\u{E77B}";
+    out property <string> theme: "\u{E793}";
+    out property <string> nav: "\u{E700}";
+    out property <string> chevron-right: "\u{E76C}";
+    out property <string> chevron-down: "\u{E70D}";
+    out property <string> up: "\u{E70E}";
+    out property <string> down: "\u{E70D}";
+    out property <string> flag: "\u{E7C1}";
+    out property <string> warning: "\u{E7BA}";
+    out property <string> error: "\u{E783}";
+    out property <string> check: "\u{E73E}";
+    out property <string> info: "\u{E946}";
+    out property <string> close: "\u{E711}";
+    out property <string> today: "\u{E8D1}";
+    out property <string> table: "\u{E80A}";
+    out property <string> document: "\u{E8A5}";
+    out property <string> lock: "\u{E72E}";
+    out property <string> timeline: "\u{E787}";
+    out property <string> more: "\u{E712}";
+}

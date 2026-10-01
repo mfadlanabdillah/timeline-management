@@ -1,0 +1,65 @@
+import { Date } from "std-widgets.slint";
+import { Kpis, ProjectCard, GanttRow, DayTick, MonthSpan } from "types.slint";
+
+// Everything Rust pushes into the UI.
+export global AppData {
+    in-out property <bool> signed-in;
+    in-out property <bool> needs-setup;
+    in-out property <string> username;
+
+    // 0 = home (portfolio), 1 = project timeline
+    in-out property <int> page;
+    in-out property <[ProjectCard]> projects;
+    in-out property <Kpis> portfolio;
+
+    in-out property <string> project-id;
+    in-out property <string> project-name;
+    in-out property <string> project-code;
+    in-out property <Kpis> project-kpis;
+
+    // Gantt geometry, laid out in Rust.
+    in-out property <[GanttRow]> rows;
+    in-out property <[DayTick]> days;
+    in-out property <[MonthSpan]> months;
+    in-out property <length> day-width: 40px;
+    in-out property <length> gantt-width;
+    in-out property <length> today-x: -1px;
+    // 0 = days, 1 = weeks
+    in-out property <int> zoom;
+    // Bumped by Rust to ask the Gantt to scroll today into view.
+    in-out property <int> scroll-to-today;
+
+    // Transient notification (InfoBar toast). kind: 1 success, 2 info, 4 critical.
+    in-out property <string> toast;
+    in-out property <int> toast-kind: 2;
+}
+
+// Everything the UI asks Rust to do. Callbacks returning string return an
+// error message, or "" on success.
+export global Api {
+    callback login(string, string) -> string;
+    callback setup-admin(string, string) -> string;
+    callback sign-out();
+
+    callback open-home();
+    callback open-project(string);
+    callback save-project(/* id or "" */ string, /* name */ string, /* code */ string) -> string;
+    callback delete-project(string);
+
+    callback save-item(
+        /* id or "" */ string, /* name */ string, /* start */ string, /* end */ string,
+        /* color */ string, /* milestone */ bool) -> string;
+    callback delete-item(string);
+    // mode: 1 move, 2 resize end, 3 resize start
+    callback drag-item(string, int, int);
+    // dir: -1 up, +1 down
+    callback move-item(string, int);
+    callback set-zoom(int);
+    callback export(/* "xlsx" | "pdf" */ string);
+    callback theme-changed(int);
+
+    pure callback parse-date(string) -> Date;
+    pure callback format-date(Date) -> string;
+    pure callback today() -> string;
+    pure callback parse-color(string) -> color;
+}

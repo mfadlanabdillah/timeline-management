@@ -1,0 +1,280 @@
+import { ScrollView, Palette } from "std-widgets.slint";
+import { Theme, Icon } from "theme.slint";
+import { GanttRow, ProjectCard } from "types.slint";
+import { AppData, Api } from "state.slint";
+import { FIcon, Label, IconButton, NavItem, InfoBar } from "controls.slint";
+import { LoginPage } from "login.slint";
+import { HomePage } from "home.slint";
+import { ProjectPage } from "project.slint";
+import { ProjectDialog, ItemDialog, ConfirmDialog } from "dialogs.slint";
+
+export { AppData, Api, Theme }
+
+export component AppWindow inherits Window {
+    title: AppData.page == 1 ? AppData.project-name + " — PO Timeline" : "PO Timeline";
+    icon: @image-url("../../src-tauri/icons/128x128.png");
+    min-width: 1024px;
+    min-height: 600px;
+    preferred-width: 1280px;
+    preferred-height: 720px;
+    background: Theme.mica;
+    default-font-family: Theme.font;
+    default-font-size: Theme.body;
+
+    property <bool> nav-open: true;
+    // 0 none, 1 project, 2 item, 3 confirm
+    property <int> dialog;
+    property <string> dialog-error;
+
+    property <string> pd-id;
+    property <string> pd-name;
+    property <string> pd-code;
+
+    property <string> id-id;
+    property <string> id-name;
+    property <string> id-start;
+    property <string> id-end;
+    property <string> id-color;
+    property <bool> id-milestone;
+
+    property <string> cf-kind;
+    property <string> cf-id;
+    property <string> cf-title;
+    property <string> cf-message;
+
+    public function apply-theme(mode: int) {
+        Theme.mode = mode;
+        Palette.color-scheme = mode == 1 ? ColorScheme.light : mode == 2 ? ColorScheme.dark : ColorScheme.unknown;
+    }
+
+    function open-project-dialog(p: ProjectCard) {
+        pd-id = p.id;
+        pd-name = p.name;
+        pd-code = p.code;
+        dialog-error = "";
+        dialog = 1;
+    }
+    function open-item-dialog(r: GanttRow) {
+        id-id = r.id;
+        id-name = r.name;
+        id-start = r.start;
+        id-end = r.end;
+        id-color = r.color-hex;
+        id-milestone = r.milestone;
+        dialog-error = "";
+        dialog = 2;
+    }
+    function confirm(kind: string, id: string, title: string, message: string) {
+        cf-kind = kind;
+        cf-id = id;
+        cf-title = title;
+        cf-message = message;
+        dialog = 3;
+    }
+
+    if !AppData.signed-in: LoginPage {
+        setup-mode: AppData.needs-setup;
+        submit(u, p) => {
+            return AppData.needs-setup ? Api.setup-admin(u, p) : Api.login(u, p);
+        }
+    }
+
+    if AppData.signed-in: HorizontalLayout {
+        // ---- NavigationView pane
+        Rectangle {
+            width: nav-open ? 280px : 52px;
+            animate width { duration: 180ms; easing: ease-out; }
+            VerticalLayout {
+                padding: 4px;
+                padding-top: 6px;
+                spacing: 2px;
+
+                HorizontalLayout {
+                    height: 44px;
+                    spacing: 8px;
+                    IconButton {
+                        y: (parent.height - self.height) / 2;
+                        glyph: Icon.nav;
+                        size: 40px;
+                        tooltip: "Toggle navigation";
+                        clicked => { nav-open = !nav-open; }
+                    }
+                    if nav-open: Label {
+                        text: "PO Timeline";
+                        font-size: Theme.caption;
+                    }
+                }
+
+                NavItem {
+                    glyph: Icon.home;
+                    text: "Portfolio";
+                    collapsed: !nav-open;
+                    selected: AppData.page == 0;
+                    clicked => { Api.open-home(); }
+                }
+
+                Rectangle {
+                    height: 36px;
+                    if nav-open: HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 4px;
+                        Label {
+                            text: "Projects";
+                            font-size: Theme.caption;
+                            font-weight: 600;
+                            color: Theme.text-2;
+                            horizontal-stretch: 1;
+                        }
+                        IconButton {
+                            y: (parent.height - self.height) / 2;
+                            glyph: Icon.add;
+                            size: 28px;
+                            tooltip: "New project";
+                            clicked => { open-project-dialog({ id: "", name: "", code: "" }); }
+                        }
+                    }
+                    if !nav-open: Rectangle {
+                        height: 1px;
+                        background: Theme.divider;
+                    }
+                }
+
+                ScrollView {
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        alignment: start;
+                        spacing: 2px;
+                        for p in AppData.projects: NavItem {
+                            glyph: Icon.project;
+                            text: p.name;
+                            trailing: p.k.progress + "%";
+                            collapsed: !nav-open;
+                            show-dot: p.health >= 3;
+                            dot-color: Theme.status-fg(p.health);
+                            selected: AppData.page == 1 && AppData.project-id == p.id;
+                            clicked => { Api.open-project(p.id); }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.divider;
+                }
+                NavItem {
+                    glyph: Icon.theme;
+                    text: Theme.mode == 0 ? "Theme: System" : Theme.mode == 1 ? "Theme: Light" : "Theme: Dark";
+                    collapsed: !nav-open;
+                    clicked => {
+                        apply-theme(mod(Theme.mode + 1, 3));
+                        Api.theme-changed(Theme.mode);
+                    }
+                }
+                NavItem {
+                    glyph: Icon.person;
+                    text: AppData.username;
+                    trailing: "Admin";
+                    collapsed: !nav-open;
+                }
+                NavItem {
+                    glyph: Icon.sign-out;
+                    text: "Sign out";
+                    collapsed: !nav-open;
+                    clicked => { Api.sign-out(); }
+                }
+            }
+        }
+
+        // ---- content layer
+        Rectangle {
+            horizontal-stretch: 1;
+            background: Theme.layer;
+            border-top-left-radius: Theme.radius;
+            border-width: 1px;
+            border-color: Theme.stroke;
+            clip: true;
+
+            if AppData.page == 0: HomePage {
+                new-project => { open-project-dialog({ id: "", name: "", code: "" }); }
+                edit-project(p) => { open-project-dialog(p); }
+                delete-project(p) => {
+                    confirm("project", p.id, "Delete project?",
+                        "\"" + p.name + "\" and all of its items, notes and progress will be permanently removed.");
+                }
+            }
+            if AppData.page == 1: ProjectPage {
+                new-item => {
+                    open-item-dialog({ id: "", name: "", start: Api.today(), end: Api.today(), color-hex: "#6D5EF1", milestone: false });
+                }
+                open-item(r) => { open-item-dialog(r); }
+                edit-project => {
+                    open-project-dialog({ id: AppData.project-id, name: AppData.project-name, code: AppData.project-code });
+                }
+                delete-project => {
+                    confirm("project", AppData.project-id, "Delete project?",
+                        "\"" + AppData.project-name + "\" and all of its items, notes and progress will be permanently removed.");
+                }
+            }
+        }
+    }
+
+    // ---- dialogs
+    if dialog == 1: ProjectDialog {
+        project-id <=> pd-id;
+        name <=> pd-name;
+        code <=> pd-code;
+        error: dialog-error;
+        accepted => {
+            dialog-error = Api.save-project(pd-id, pd-name, pd-code);
+            if dialog-error == "" { dialog = 0; }
+        }
+        canceled => { dialog = 0; }
+    }
+    if dialog == 2: ItemDialog {
+        item-id <=> id-id;
+        name <=> id-name;
+        start <=> id-start;
+        end <=> id-end;
+        item-color <=> id-color;
+        milestone <=> id-milestone;
+        error: dialog-error;
+        accepted => {
+            dialog-error = Api.save-item(id-id, id-name, id-start, id-milestone ? id-start : id-end, id-color, id-milestone);
+            if dialog-error == "" { dialog = 0; }
+        }
+        canceled => { dialog = 0; }
+        delete-item => {
+            confirm("item", id-id, "Delete item?",
+                "\"" + id-name + "\" and its notes, issues and progress history will be permanently removed.");
+        }
+    }
+    if dialog == 3: ConfirmDialog {
+        title: cf-title;
+        message: cf-message;
+        accepted => {
+            if cf-kind == "project" { Api.delete-project(cf-id); }
+            if cf-kind == "item" { Api.delete-item(cf-id); }
+            dialog = 0;
+        }
+        canceled => { dialog = 0; }
+    }
+
+    // ---- toast
+    if AppData.toast != "": InfoBar {
+        x: (root.width - self.width) / 2;
+        y: root.height - self.height - 24px;
+        width: min(560px, root.width - 48px);
+        height: self.preferred-height;
+        kind: AppData.toast-kind;
+        text: AppData.toast;
+        drop-shadow-blur: 16px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: #00000030;
+        closed => { AppData.toast = ""; }
+    }
+    Timer {
+        interval: 5s;
+        running: AppData.toast != "";
+        triggered => { AppData.toast = ""; }
+    }
+}

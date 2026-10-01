@@ -1,0 +1,47 @@
+export struct Kpis {
+    progress: int,
+    total: int,
+    completed: int,
+    at-risk: int,
+    overdue: int,
+    issues: int,
+}
+
+export struct ProjectCard {
+    id: string,
+    name: string,
+    code: string,
+    k: Kpis,
+    // Worst item status kind, for the sidebar dot (see Theme.status-fg).
+    health: int,
+}
+
+export struct GanttRow {
+    id: string,
+    name: string,
+    start: string,
+    end: string,
+    tint: color,
+    color-hex: string,
+    milestone: bool,
+    left: length,
+    span: length,
+    progress: int,
+    status: string,
+    status-kind: int,
+    issues: int,
+    days: int,
+    range-label: string,
+}
+
+export struct DayTick {
+    left: length,
+    label: string,
+    weekend: bool,
+}
+
+export struct MonthSpan {
+    left: length,
+    span: length,
+    label: string,
+}

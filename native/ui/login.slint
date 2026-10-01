@@ -1,0 +1,126 @@
+import { LineEdit } from "std-widgets.slint";
+import { Theme, Icon } from "theme.slint";
+import { FIcon, Label, FButton, InfoBar, FieldLabel } from "controls.slint";
+
+export component LoginPage inherits Rectangle {
+    in property <bool> setup-mode;
+    // Returns an error message, or "" on success.
+    callback submit(string, string) -> string;
+
+    property <string> error;
+    property <string> confirm;
+    property <bool> busy;
+
+    function go() {
+        if setup-mode && pw.text != confirm {
+            error = "Passwords don't match.";
+            return;
+        }
+        error = root.submit(user.text, pw.text);
+        if error == "" {
+            pw.text = "";
+            confirm = "";
+        }
+    }
+
+    background: Theme.mica;
+
+    Rectangle {
+        width: 400px;
+        height: col.preferred-height;
+        background: Theme.layer;
+        border-radius: Theme.radius;
+        border-width: 1px;
+        border-color: Theme.stroke;
+        drop-shadow-blur: 24px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: #0000001F;
+
+        col := VerticalLayout {
+            padding: 36px;
+            spacing: 14px;
+
+            Rectangle {
+                height: 56px;
+                Rectangle {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 14px;
+                    background: @linear-gradient(135deg, Theme.accent 0%, #7A5CFA 100%);
+                    FIcon {
+                        glyph: Icon.timeline;
+                        font-size: 26px;
+                        color: #FFFFFF;
+                    }
+                }
+            }
+            Label {
+                text: "PO Timeline";
+                font-family: Theme.font-display;
+                font-size: Theme.title;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+            Label {
+                text: setup-mode
+                    ? "Welcome! Create the administrator account for this device."
+                    : "Sign in to manage your project timelines.";
+                color: Theme.text-2;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+            Rectangle { height: 4px; }
+
+            if error != "": InfoBar {
+                kind: 4;
+                text: error;
+                closed => { error = ""; }
+            }
+
+            VerticalLayout {
+                spacing: 6px;
+                FieldLabel { text: "Username"; }
+                user := LineEdit {
+                    placeholder-text: "admin";
+                    accepted => { pw.focus(); }
+                }
+            }
+            VerticalLayout {
+                spacing: 6px;
+                FieldLabel { text: "Password"; }
+                pw := LineEdit {
+                    input-type: password;
+                    placeholder-text: setup-mode ? "At least 8 characters" : "";
+                    accepted => {
+                        if !setup-mode { go(); }
+                    }
+                }
+            }
+            if setup-mode: VerticalLayout {
+                spacing: 6px;
+                FieldLabel { text: "Confirm password"; }
+                pw2 := LineEdit {
+                    text <=> root.confirm;
+                    input-type: password;
+                    accepted => { go(); }
+                }
+            }
+            Rectangle { height: 6px; }
+            FButton {
+                height: 36px;
+                accent: true;
+                text: setup-mode ? "Create account" : "Sign in";
+                glyph: setup-mode ? Icon.person : Icon.lock;
+                clicked => { go(); }
+            }
+            Label {
+                text: "Data is stored locally on this device.";
+                font-size: Theme.caption;
+                color: Theme.text-3;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    init => { user.focus(); }
+}

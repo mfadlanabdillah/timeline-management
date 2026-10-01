@@ -13,6 +13,7 @@ dist-ssr
 *.local
 src-tauri/target
 core/target
+native/target
 *.db
 *.db-journal
 

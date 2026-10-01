@@ -1,0 +1,162 @@
+import { LineEdit, CheckBox, DatePickerPopup } from "std-widgets.slint";
+import { Theme, Icon } from "theme.slint";
+import { Api } from "state.slint";
+import { ContentDialog, FieldLabel, Label, FButton, IconButton, FIcon } from "controls.slint";
+
+export component ProjectDialog inherits ContentDialog {
+    in-out property <string> project-id;
+    in-out property <string> name;
+    in-out property <string> code;
+
+    title: project-id == "" ? "New project" : "Edit project";
+    primary-text: project-id == "" ? "Create" : "Save";
+
+    VerticalLayout {
+        spacing: 6px;
+        FieldLabel { text: "Project name"; }
+        name-edit := LineEdit {
+            text <=> root.name;
+            placeholder-text: "e.g. Website Revamp";
+            accepted => { root.accepted(); }
+        }
+    }
+    VerticalLayout {
+        spacing: 6px;
+        FieldLabel { text: "Project code"; }
+        LineEdit {
+            text <=> root.code;
+            placeholder-text: "e.g. WEB-2026";
+            accepted => { root.accepted(); }
+        }
+        Label {
+            text: "Stakeholders open the timeline with this code. Letters, digits and dashes.";
+            font-size: 11px;
+            color: Theme.text-3;
+            wrap: word-wrap;
+        }
+    }
+    init => { name-edit.focus(); }
+}
+
+// Date text box with a calendar flyout.
+component DateField inherits HorizontalLayout {
+    in property <string> label;
+    in-out property <string> value;
+    spacing: 6px;
+    VerticalLayout {
+        spacing: 6px;
+        horizontal-stretch: 1;
+        FieldLabel { text: label; }
+        HorizontalLayout {
+            spacing: 4px;
+            LineEdit {
+                text <=> root.value;
+                placeholder-text: "YYYY-MM-DD";
+            }
+            FButton {
+                glyph: Icon.calendar;
+                y: (parent.height - self.height) / 2;
+                clicked => { picker.show(); }
+            }
+        }
+    }
+    picker := DatePickerPopup {
+        x: 0;
+        y: 0;
+        title: label;
+        date: Api.parse-date(root.value);
+        accepted(d) => { root.value = Api.format-date(d); }
+    }
+}
+
+export component ItemDialog inherits ContentDialog {
+    in-out property <string> item-id;
+    in-out property <string> name;
+    in-out property <string> start;
+    in-out property <string> end;
+    in-out property <string> item-color: "#6D5EF1";
+    in-out property <bool> milestone;
+    callback delete-item();
+
+    property <[string]> presets: ["#6D5EF1", "#005FB8", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6"];
+
+    title: item-id == "" ? "New timeline item" : "Edit timeline item";
+    primary-text: item-id == "" ? "Add" : "Save";
+    dialog-width: 500px;
+
+    VerticalLayout {
+        spacing: 6px;
+        FieldLabel { text: "Name"; }
+        name-edit := LineEdit {
+            text <=> root.name;
+            placeholder-text: "e.g. Design phase";
+        }
+    }
+    CheckBox {
+        text: "Milestone (single date, no duration)";
+        checked <=> root.milestone;
+    }
+    HorizontalLayout {
+        spacing: 12px;
+        DateField {
+            label: milestone ? "Date" : "Start";
+            value <=> root.start;
+        }
+        if !milestone: DateField {
+            label: "End";
+            value <=> root.end;
+        }
+    }
+    VerticalLayout {
+        spacing: 8px;
+        FieldLabel { text: "Color"; }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: LayoutAlignment.start;
+            for c in presets: Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 14px;
+                border-width: c == root.item-color ? 2px : 0;
+                border-color: Theme.text;
+                Rectangle {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 11px;
+                    background: Api.parse-color(c);
+                }
+                if c == root.item-color: FIcon {
+                    glyph: Icon.check;
+                    font-size: 10px;
+                    color: #FFFFFF;
+                }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.item-color = c; }
+                }
+            }
+        }
+    }
+    if item-id != "": HorizontalLayout {
+        alignment: LayoutAlignment.start;
+        FButton {
+            danger: true;
+            glyph: Icon.delete;
+            text: "Delete item";
+            clicked => { root.delete-item(); }
+        }
+    }
+    init => { name-edit.focus(); }
+}
+
+export component ConfirmDialog inherits ContentDialog {
+    in property <string> message;
+    danger: true;
+    primary-text: "Delete";
+    Label {
+        text: message;
+        wrap: word-wrap;
+        color: Theme.text-2;
+        overflow: clip;
+    }
+}

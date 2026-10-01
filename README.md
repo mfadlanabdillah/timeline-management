@@ -14,7 +14,40 @@ Target build pertama: **Windows** (MSI/NSIS). Tanpa server, tanpa jaringan:
   DTO backend, audit best-effort, `seed_demo()`. Punya integration tests.
 - `src-tauri/` — wrapper tipis: tiap Tauri command = 3 baris delegasi ke core.
   DB di `%APPDATA%/id.po.timeline/timeline.db`, secret di `jwt.secret` sebelahnya.
-- `.github/workflows/build-windows.yml` — CI: tsc + lint + `cargo test` + `tauri build`.
+- `native/` — app pure native (Slint), lihat bagian di bawah.
+- `.github/workflows/build-windows.yml` — CI: tsc + lint + `cargo test` + `tauri build`, plus build exe native.
+
+## App native (Slint) — `native/` (sedang dikembangkan)
+
+Versi **pure native** tanpa WebView, dengan desain ulang **Fluent / Windows 11**
+(NavigationView, warna ala Mica, Segoe UI Variable + Segoe Fluent Icons, terang/gelap/ikuti
+sistem). UI-nya ditulis dengan [Slint](https://slint.dev) dan memanggil `core/`
+secara langsung (tanpa `invoke`/JSON). Datanya memakai DB yang sama dengan versi
+Tauri (`%APPDATA%\id.po.timeline`), jadi kedua versi bisa dipakai bergantian.
+
+- `native/ui/*.slint` — `theme` (design token), `controls` (Button, NavItem,
+  InfoBar, ContentDialog, …), `login`, `home` (portfolio), `project` (Gantt),
+  `dialogs`, `app` (window + sidebar).
+- `native/src/gantt.rs` — layout Gantt (posisi px, header hari/bulan, garis hari
+  ini), di-unit-test. `core/src/health.rs` — status On track/At risk/… (port dari
+  `healthUtils.ts`), dipakai bersama.
+- Renderer software Slint: RAM ±30 MB (vs ±140 MB dengan OpenGL), exe tunggal
+  ±18 MB, tidak butuh WebView2.
+
+Fase 1 (selesai): login/setup admin, sesi tersimpan, portfolio + KPI, CRUD
+project, Gantt (zoom hari/minggu, drag untuk geser, tarik tepi untuk resize,
+urut naik/turun), CRUD item + kalender, export XLSX/PDF, tema.
+Fase 2: notes/issues + balasan, progress & kurva S, dependensi + critical path,
+guest-by-code, activity log.
+
+```bash
+cargo run --manifest-path native/Cargo.toml -- --seed   # admin/admin123456 + data demo
+cargo build --release --manifest-path native/Cargo.toml # native/target/release/po-timeline.exe
+```
+
+Mode portable: taruh file kosong bernama `portable` di sebelah exe, maka data
+disimpan di folder `data\` di sebelahnya (misalnya untuk flashdisk). Lokasi data
+juga bisa diganti dengan env `PO_TIMELINE_DATA_DIR`.
 
 ## Jalankan (dev, Linux OK untuk UI + core)
 
