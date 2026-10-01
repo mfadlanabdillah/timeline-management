@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability. Backend is in-process SQLite; the dialog plugin is only driven from Rust (export_project), so no JS dialog permissions are granted.","local":true,"windows":["main"],"permissions":[]}}

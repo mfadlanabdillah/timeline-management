@@ -8,7 +8,7 @@ Target build pertama: **Windows** (MSI/NSIS). Tanpa server, tanpa jaringan:
 
 - `src/` — UI React (reuse 90% dari `frontend/` web: Gantt custom, notes/issues,
   progress, guest-by-code). Hanya `src/api/*` yang ditulis ulang ke `invoke()`,
-  plus `HashRouter` (aman untuk webview `tauri://`) dan stub export MVP.
+  plus `HashRouter` (aman untuk webview `tauri://`) dan export XLSX/PDF via dialog Save native.
 - `core/` — Rust library `timeline-core`: SQLite (`rusqlite/bundled`, nol
   system-deps), auth lokal (Argon2 + JWT device-secret), validasi sama dengan
   DTO backend, audit best-effort, `seed_demo()`. Punya integration tests.
@@ -44,7 +44,12 @@ hanya saat users kosong). Atau jalankan sekali dengan `--seed`.
 
 - Auth: 1 admin lokal (Argon2, JWT 30 hari, secret per-device). Guest: kode
   project dicek lokal, pesan error diseragamkan (anti-probing) seperti backend.
-- MVP: **tanpa export XLSX/PDF** (`ExportMenu` melempar pesan jelas),
-  activity log tetap ditulis + bisa dibaca (tombol Activity aktif).
+- Export XLSX/PDF dibuat di Rust (`core/src/export.rs`: `rust_xlsxwriter` +
+  `printpdf`), aturan akses sama dengan baca (admin token atau kode project).
+  XLSX: sheet Timeline, Notes & Issues, Progress, Dependencies. PDF: tabel +
+  mini-Gantt (progress, milestone, garis hari ini) + daftar issue terbuka.
+- Activity log tetap ditulis + bisa dibaca (tombol Activity aktif).
+- Semua Tauri command memakai `rename_all = "snake_case"` — argumen dari TS
+  dikirim snake_case (`item_id`, `project_id`, ...).
 - Tanggal `TEXT YYYY-MM-DD`, UUID `TEXT`, FK cascade — port DDL dari
   `dump-timeline_db-*.sql` (dump aslinya schema-only, data dummy via seeder).

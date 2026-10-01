@@ -10,14 +10,19 @@ interface ExportMenuProps {
 export function ExportMenu({ projectId, projectCode }: ExportMenuProps) {
   const [busy, setBusy] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedTo, setSavedTo] = useState<string | null>(null);
 
   async function handleDownload(format: ExportFormat) {
     setBusy(format);
     setError(null);
+    setSavedTo(null);
     try {
-      await downloadProjectExport(projectId, format, projectCode);
-    } catch {
-      setError('Export failed');
+      const path = await downloadProjectExport(projectId, format, projectCode);
+      if (path) setSavedTo(path);
+    } catch (e) {
+      // Strip the `CODE: ` routing prefix from Rust errors.
+      const msg = e instanceof Error ? e.message.replace(/^[A-Z_]+:\s*/, '') : '';
+      setError(msg ? `Export failed: ${msg}` : 'Export failed');
     } finally {
       setBusy(null);
     }
@@ -37,6 +42,11 @@ export function ExportMenu({ projectId, projectCode }: ExportMenuProps) {
         </button>
       ))}
       {error && <span className="text-xs text-issue">{error}</span>}
+      {savedTo && (
+        <span className="max-w-48 truncate text-xs text-text-muted" title={savedTo}>
+          Saved: {savedTo.split(/[\\/]/).pop()}
+        </span>
+      )}
     </div>
   );
 }

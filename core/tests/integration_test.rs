@@ -134,3 +134,30 @@ fn seed_is_idempotent_and_audit_logged() {
     let p = store.get_project_by_code(SECRET, "DEMO-01", t).unwrap();
     assert_eq!(p.dependencies.unwrap().len(), 2);
 }
+
+#[test]
+fn export_xlsx_and_pdf_with_access_rules() {
+    use timeline_core::export::ExportFormat;
+    let (store, token) = setup();
+    let t = Some(token.as_str());
+    seed_demo(&store, SECRET, &token).unwrap();
+    let projects = store.list_projects(SECRET, t).unwrap();
+    let p = &projects[0];
+
+    let x = store.export_project(SECRET, &p.id, ExportFormat::Xlsx, None, t).unwrap();
+    assert!(x.filename.ends_with(".xlsx"), "{}", x.filename);
+    assert_eq!(&x.bytes[..2], b"PK");
+
+    // Guest with the right code can export; wrong/missing code is UNAUTH.
+    let pdf = store.export_project(SECRET, &p.id, ExportFormat::Pdf, Some(&p.code), None).unwrap();
+    assert!(pdf.bytes.starts_with(b"%PDF"));
+    let e = store.export_project(SECRET, &p.id, ExportFormat::Pdf, Some("WRONG-1"), None).unwrap_err();
+    assert!(e.to_string().starts_with("UNAUTH:"), "{e}");
+    let e = store.export_project(SECRET, "no-such-id", ExportFormat::Pdf, None, None).unwrap_err();
+    assert!(e.to_string().starts_with("UNAUTH:"), "{e}");
+
+    if let Ok(dir) = std::env::var("EXPORT_SAMPLE_DIR") {
+        std::fs::write(format!("{dir}/{}", x.filename), &x.bytes).unwrap();
+        std::fs::write(format!("{dir}/{}", pdf.filename), &pdf.bytes).unwrap();
+    }
+}

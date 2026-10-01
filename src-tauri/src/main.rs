@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{Manager, State};
+use tauri_plugin_dialog::DialogExt;
 use timeline_core::{
     auth::load_or_create_secret,
+    export::ExportFormat,
     models::*,
     Store,
 };
@@ -22,17 +24,17 @@ fn tok(t: Option<String>) -> Option<String> {
 
 // ---------- auth ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn init_admin(state: State<'_, AppState>, username: String, password: String) -> Cmd<LoginResponse> {
     state.store.init_admin(&state.secret, &username, &password).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn login(state: State<'_, AppState>, username: String, password: String) -> Cmd<LoginResponse> {
     state.store.login(&state.secret, &username, &password).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn change_password(
     state: State<'_, AppState>,
     current_password: String,
@@ -47,12 +49,12 @@ fn change_password(
 
 // ---------- projects ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_projects(state: State<'_, AppState>, token: Option<String>) -> Cmd<Vec<Project>> {
     state.store.list_projects(&state.secret, tok(token).as_deref()).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn get_project_by_code(
     state: State<'_, AppState>,
     code: String,
@@ -64,7 +66,7 @@ fn get_project_by_code(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn create_project(
     state: State<'_, AppState>,
     name: String,
@@ -77,7 +79,7 @@ fn create_project(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn update_project(
     state: State<'_, AppState>,
     id: String,
@@ -91,14 +93,14 @@ fn update_project(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_project(state: State<'_, AppState>, id: String, token: Option<String>) -> Cmd<()> {
     state.store.delete_project(&state.secret, tok(token).as_deref(), &id).map_err(err)
 }
 
 // ---------- items ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_timeline_items(
     state: State<'_, AppState>,
     project_id: String,
@@ -107,7 +109,7 @@ fn list_timeline_items(
     state.store.list_items(&state.secret, tok(token).as_deref(), &project_id).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn create_timeline_item(
     state: State<'_, AppState>,
     project_id: String,
@@ -133,7 +135,7 @@ fn create_timeline_item(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn update_timeline_item(
     state: State<'_, AppState>,
     id: String,
@@ -161,14 +163,14 @@ fn update_timeline_item(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_timeline_item(state: State<'_, AppState>, id: String, token: Option<String>) -> Cmd<()> {
     state.store.delete_item(&state.secret, tok(token).as_deref(), &id).map_err(err)
 }
 
 // ---------- notes ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_notes(
     state: State<'_, AppState>,
     item_id: String,
@@ -181,7 +183,7 @@ fn list_notes(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn create_note(
     state: State<'_, AppState>,
     item_id: String,
@@ -193,7 +195,7 @@ fn create_note(
     code: Option<String>,
     token: Option<String>,
 ) -> Cmd<Note> {
-    // serde camelCase → snake: the TS side sends `type` + `evidenceUrl`.
+    // Commands use rename_all = "snake_case": the TS side sends `note_type`, `evidence_url`, ...
     state
         .store
         .create_note(
@@ -210,7 +212,7 @@ fn create_note(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn create_note_reply(
     state: State<'_, AppState>,
     note_id: String,
@@ -232,7 +234,7 @@ fn create_note_reply(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_note_reply(
     state: State<'_, AppState>,
     note_id: String,
@@ -245,7 +247,7 @@ fn delete_note_reply(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn set_note_evidence(
     state: State<'_, AppState>,
     id: String,
@@ -258,7 +260,7 @@ fn set_note_evidence(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn set_note_resolved(
     state: State<'_, AppState>,
     id: String,
@@ -271,14 +273,14 @@ fn set_note_resolved(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_note(state: State<'_, AppState>, id: String, token: Option<String>) -> Cmd<()> {
     state.store.delete_note(&state.secret, tok(token).as_deref(), &id).map_err(err)
 }
 
 // ---------- progress ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_progress(
     state: State<'_, AppState>,
     item_id: String,
@@ -291,7 +293,7 @@ fn list_progress(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn upsert_progress(
     state: State<'_, AppState>,
     item_id: String,
@@ -305,14 +307,14 @@ fn upsert_progress(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_progress(state: State<'_, AppState>, id: String, token: Option<String>) -> Cmd<()> {
     state.store.delete_progress(&state.secret, tok(token).as_deref(), &id).map_err(err)
 }
 
 // ---------- dependencies ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_dependencies(
     state: State<'_, AppState>,
     project_id: String,
@@ -324,7 +326,7 @@ fn list_dependencies(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn create_dependency(
     state: State<'_, AppState>,
     predecessor_id: String,
@@ -337,14 +339,52 @@ fn create_dependency(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn delete_dependency(state: State<'_, AppState>, id: String, token: Option<String>) -> Cmd<()> {
     state.store.delete_dependency(&state.secret, tok(token).as_deref(), &id).map_err(err)
 }
 
+// ---------- export ----------
+
+/// Builds the report first (so access errors surface before any dialog), then asks
+/// where to save. Async so the blocking native dialog stays off the main thread.
+/// Returns the saved path, or None if the user cancelled.
+#[tauri::command(rename_all = "snake_case")]
+async fn export_project(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+    format: String,
+    code: Option<String>,
+    token: Option<String>,
+) -> Cmd<Option<String>> {
+    let format = ExportFormat::parse(&format).map_err(err)?;
+    let file = state
+        .store
+        .export_project(&state.secret, &project_id, format, code.as_deref(), tok(token).as_deref())
+        .map_err(err)?;
+    let label = match format {
+        ExportFormat::Xlsx => "Excel workbook",
+        ExportFormat::Pdf => "PDF document",
+    };
+    let Some(target) = app
+        .dialog()
+        .file()
+        .set_title("Save timeline report")
+        .set_file_name(&file.filename)
+        .add_filter(label, &[format.ext()])
+        .blocking_save_file()
+    else {
+        return Ok(None);
+    };
+    let path = target.into_path().map_err(|e| format!("EXPORT: {e}"))?;
+    std::fs::write(&path, &file.bytes).map_err(|e| format!("EXPORT: {e}"))?;
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
 // ---------- audit + seed ----------
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn list_audit_logs(
     state: State<'_, AppState>,
     project_id: Option<String>,
@@ -358,7 +398,7 @@ fn list_audit_logs(
         .map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 fn seed_demo(state: State<'_, AppState>, token: Option<String>) -> Cmd<Vec<String>> {
     let t = tok(token).ok_or_else(|| "UNAUTH: admin sign-in required".to_string())?;
     timeline_core::seed::seed_demo(&state.store, &state.secret, &t).map_err(err)
@@ -366,6 +406,7 @@ fn seed_demo(state: State<'_, AppState>, token: Option<String>) -> Cmd<Vec<Strin
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let dir = app.path().app_data_dir().expect("app data dir");
             std::fs::create_dir_all(&dir).expect("create app data dir");
@@ -407,6 +448,7 @@ fn main() {
             list_dependencies,
             create_dependency,
             delete_dependency,
+            export_project,
             list_audit_logs,
             seed_demo
         ])

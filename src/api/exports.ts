@@ -1,11 +1,20 @@
+import { inv, sessionToken } from './tauri-client';
+
 export type ExportFormat = 'xlsx' | 'pdf';
 
-// ponytail: MVP stub — export XLSX/PDF (rust_xlsxwriter + printpdf) hadir setelah MVP.
-// Tanda tangan dipertahankan agar ExportMenu tidak berubah.
-export async function downloadProjectExport(
-  _projectId: string,
-  _format: ExportFormat,
-  _code?: string,
-): Promise<void> {
-  throw new Error('Export XLSX/PDF belum tersedia di versi desktop ini.');
+/**
+ * Rust builds the report and shows a native save dialog.
+ * Resolves to the saved path, or null if the user cancelled.
+ */
+export function downloadProjectExport(
+  projectId: string,
+  format: ExportFormat,
+  code?: string,
+): Promise<string | null> {
+  return inv<string | null>('export_project', {
+    project_id: projectId,
+    format,
+    code,
+    token: sessionToken() ?? undefined,
+  });
 }

@@ -11,6 +11,8 @@ pub enum CoreError {
     Validation(String),
     #[error("DB: {0}")]
     Db(String),
+    #[error("EXPORT: {0}")]
+    Export(String),
 }
 
 impl From<rusqlite::Error> for CoreError {
